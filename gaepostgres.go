@@ -15,8 +15,8 @@
 //   	_ "github.com/broady/gae-postgres"
 //   )
 //
-//  f unc handle(w http.ResponseWriter, r *http.Request) {
-//  	 ctx := appengine.NewContext(r)
+//   func handle(w http.ResponseWriter, r *http.Request) {
+//   	 ctx := appengine.NewContext(r)
 //
 //   	db, err := sql.Open("gae-postgres", "cloudsql=YOUR-INSTANCE-STRING username=postgres password=pw")
 //
