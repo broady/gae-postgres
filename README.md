@@ -1,5 +1,7 @@
 # Cloud SQL for PostgreSQL on Google App Engine
 
+[GoDoc](https://godoc.org/github.com/broady/gae-postgres)
+
 ## Example
 
 app.yaml
