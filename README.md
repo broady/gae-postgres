@@ -2,92 +2,111 @@
 
 [GoDoc](https://godoc.org/github.com/broady/gae-postgres)
 
+## Disclaimer
+
+This is not a Google product, and is unsupported.
+
+It uses the `google.golang.org/appengine/cloudsql` package, which is supported for MySQL, but not for Postgres.
+
+It happens to work right now, but may not forever.
+
+
 ## Example
 
 app.yaml
 
-    runtime: go
-    api_version: go1
+```yaml
+runtime: go
+api_version: go1
 
-    handlers:
-    - url: /.*
-      script: _go_app
+handlers:
+- url: /.*
+  script: _go_app
 
-    env_variables:
-      # Replace INSTANCE_CONNECTION_NAME with the value obtained when configuring your
-      # Cloud SQL instance, available from the Google Cloud Console or from the Cloud SDK.
-      # For Cloud SQL 2nd generation instances, this should be in the form of "project:region:instance".
-      CLOUDSQL_CONNECTION_NAME: 'INSTANCE_CONNECTION_NAME'
-      # Replace username and password if you aren't using the root user.
-      CLOUDSQL_USER: postgres
-      CLOUDSQL_PASSWORD: pw
+env_variables:
+  # Replace INSTANCE_CONNECTION_NAME with the value obtained when configuring your
+  # Cloud SQL instance, available from the Google Cloud Console or from the Cloud SDK.
+  # For Cloud SQL 2nd generation instances, this should be in the form of "project:region:instance".
+  CLOUDSQL_CONNECTION_NAME: 'INSTANCE_CONNECTION_NAME'
+  # Replace username and password if you aren't using the root user.
+  CLOUDSQL_USER: postgres
+  CLOUDSQL_PASSWORD: pw
+```
 
-main.go
+cloudsql.go
 
-    // Copyright 2016 Google Inc. All rights reserved.
-    // Use of this source code is governed by the Apache 2.0
-    // license that can be found in the LICENSE file.
+```go
+// Copyright 2017 Google Inc. All rights reserved.
+// Use of this source code is governed by the Apache 2.0
+// license that can be found in the LICENSE file.
 
-    // Sample cloudsql demonstrates connection to a Postgres Cloud SQL instance from App Engine standard.
-    package cloudsql
+// Sample cloudsql_postgres demonstrates connection to a Cloud SQL for Postgres instance from App Engine standard.
+package main
 
-    import (
-      "bytes"
-      "database/sql"
-      "fmt"
-      "log"
-      "net/http"
-      "os"
+import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 
-      _ "github.com/broady/gae-postgres"
-    )
+	"google.golang.org/appengine"
 
-    func init() {
-      http.HandleFunc("/", handler)
-    }
+	_ "github.com/broady/gae-postgres"
+)
 
-    func handler(w http.ResponseWriter, r *http.Request) {
-      if r.URL.Path != "/" {
-        http.NotFound(w, r)
-        return
-      }
+var db *sql.DB
 
-      connectionName := mustGetenv("CLOUDSQL_CONNECTION_NAME")
-      user := mustGetenv("CLOUDSQL_USER")
-      password := os.Getenv("CLOUDSQL_PASSWORD") // NOTE: password may be empty
+func main() {
+	var (
+		connectionName = mustGetenv("CLOUDSQL_CONNECTION_NAME")
+		user           = mustGetenv("CLOUDSQL_USER")
+		password       = os.Getenv("CLOUDSQL_PASSWORD") // NOTE: password may be empty
+	)
 
-      w.Header().Set("Content-Type", "text/plain")
+	var err error
+	db, err = sql.Open("gae-postgres", fmt.Sprintf("cloudsql=%s user=%s password='%s'", connectionName, user, password))
+	if err != nil {
+		log.Fatalf("Could not open db: %v", err)
+	}
 
-      db, err := sql.Open("gae-postgres", fmt.Sprintf("user=%s password=%s cloudsql=%s", user, password, connectionName))
-      if err != nil {
-        http.Error(w, fmt.Sprintf("Could not open db: %v", err), 500)
-        return
-      }
-      defer db.Close()
+	http.HandleFunc("/", handler)
+	appengine.Main()
+}
 
-      rows, err := db.Query("SELECT datname FROM pg_database")
-      if err != nil {
-        http.Error(w, fmt.Sprintf("Could not query db: %v", err), 500)
-        return
-      }
-      defer rows.Close()
+func handler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
 
-      buf := bytes.NewBufferString("Databases:\n")
-      for rows.Next() {
-        var dbName string
-        if err := rows.Scan(&dbName); err != nil {
-          http.Error(w, fmt.Sprintf("Could not scan result: %v", err), 500)
-          return
-        }
-        fmt.Fprintf(buf, "- %s\n", dbName)
-      }
-      w.Write(buf.Bytes())
-    }
+	w.Header().Set("Content-Type", "text/plain")
 
-    func mustGetenv(k string) string {
-      v := os.Getenv(k)
-      if v == "" {
-        log.Panicf("%s environment variable not set.", k)
-      }
-      return v
-    }
+	rows, err := db.Query("SELECT datname FROM pg_database")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Could not query db: %v", err), 500)
+		return
+	}
+	defer rows.Close()
+
+	buf := bytes.NewBufferString("Databases:\n")
+	for rows.Next() {
+		var dbName string
+		if err := rows.Scan(&dbName); err != nil {
+			http.Error(w, fmt.Sprintf("Could not scan result: %v", err), 500)
+			return
+		}
+		fmt.Fprintf(buf, "- %s\n", dbName)
+	}
+	w.Write(buf.Bytes())
+}
+
+func mustGetenv(k string) string {
+	v := os.Getenv(k)
+	if v == "" {
+		log.Panicf("%s environment variable not set.", k)
+	}
+	return v
+}
+```
