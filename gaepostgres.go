@@ -6,28 +6,25 @@
 //
 // Example usage:
 //
-//   import (
-//   	"database/sql"
-//   	"net/http"
+//	import (
+//		"database/sql"
+//		"net/http"
 //
-//   	"google.golang.org/appengine"
+//		_ "github.com/broady/gae-postgres"
+//		"google.golang.org/appengine"
+//	)
 //
-//   	_ "github.com/broady/gae-postgres"
-//   )
+//	func handle(w http.ResponseWriter, r *http.Request) {
+//		db, err := sql.Open("gae-postgres", "cloudsql=YOUR-INSTANCE-STRING username=postgres password=pw")
 //
-//   func handle(w http.ResponseWriter, r *http.Request) {
-//   	 ctx := appengine.NewContext(r)
-//
-//   	db, err := sql.Open("gae-postgres", "cloudsql=YOUR-INSTANCE-STRING username=postgres password=pw")
-//
-//   	// ...
-//   }
+//		// ...
+//	}
 //
 // See the pq docs at https://godoc.org/github.comlib/pq for more information on other options for the connection string.
 //
 // This package also supports an option for the host, ala App Engine flexible paths:
 //
-//    host=/cloudsql/YOUR-INSTANCE-STRING
+//	host=/cloudsql/YOUR-INSTANCE-STRING
 package gaepostgres
 
 import (
@@ -37,9 +34,8 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/appengine/cloudsql"
-
 	"github.com/lib/pq"
+	"google.golang.org/appengine/cloudsql"
 )
 
 func init() {
@@ -51,8 +47,6 @@ type dialer struct {
 }
 
 func (d dialer) Dial(_, _ string) (net.Conn, error) {
-	if true {
-	}
 	return cloudsql.Dial(d.instance)
 }
 
